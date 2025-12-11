@@ -12,7 +12,6 @@
 - **基础CRUD操作**: 提供常用的增删改查操作封装
 - **标记分页**: 支持单列标记分页（Marker Pagination）
 - **复合标记分页**: 支持多列组合的标记分页，适用于联合主键场景
-- **链式查询**: 提供流畅的链式查询接口
 
 ## 安装
 
@@ -102,9 +101,9 @@ func main() {
     ctx := context.Background()
     
     // 标记分页
-    results, nextMarker, err := gormutil.FindWithMarkerPagination(
+    results, nextMarker, err := gormutil.FindWithMarkerPagination[Item](
         ctx,
-        gormutil.G[Item](db),
+        db,
         "id",                              // 标记列名
         func(item Item) string {           // 标记提取器
             return item.ID
@@ -164,9 +163,9 @@ func main() {
     }
     
     // 执行复合分页查询
-    results, nextMarker, err := gormutil.FindWithCompositePagination(
+    results, nextMarker, err := gormutil.FindWithCompositePagination[OrderItem](
         ctx,
-        gormutil.G[OrderItem](db),
+        db,
         columns,
         markerExtractor,
         gormutil.CompositePaginationMarker{}, // 空标记表示第一页
@@ -187,7 +186,9 @@ func main() {
 }
 ```
 
-### 链式查询
+### 使用GORM原生API查询
+
+本库直接使用GORM的原生API，无需额外封装：
 
 ```go
 package main
@@ -196,7 +197,6 @@ import (
     "context"
     "log"
     
-    gormutil "github.com/zhangzqs/gorm-generics-util"
     "gorm.io/driver/sqlite"
     "gorm.io/gorm"
 )
@@ -211,12 +211,13 @@ func main() {
     db, _ := gorm.Open(sqlite.Open("test.db"), &gorm.Config{})
     ctx := context.Background()
     
-    // 链式查询
-    results, err := gormutil.G[User](db).
+    // 查询多条记录
+    var results []User
+    err := db.WithContext(ctx).
         Where("age > ?", 18).
         Order("name ASC").
         Limit(10).
-        Find(ctx)
+        Find(&results).Error
     
     if err != nil {
         log.Fatal(err)
@@ -225,9 +226,10 @@ func main() {
     log.Printf("Results: %+v", results)
     
     // 查询单条记录
-    user, err := gormutil.G[User](db).
+    var user User
+    err = db.WithContext(ctx).
         Where("id = ?", "1").
-        First(ctx)
+        First(&user).Error
     
     if err != nil {
         log.Fatal(err)
@@ -264,7 +266,7 @@ func main() {
 
 **参数：**
 - `ctx`: 上下文
-- `chain`: GORM查询链
+- `db`: GORM数据库实例
 - `markerColumnName`: 标记列名（必须已建立索引且值唯一递增）
 - `markerFieldExtractor`: 从记录中提取标记值的函数
 - `marker`: 上一页返回的标记值，空字符串表示第一页
@@ -283,7 +285,7 @@ func main() {
 
 **参数：**
 - `ctx`: 上下文
-- `chain`: GORM查询链
+- `db`: GORM数据库实例
 - `columns`: 用于分页的列配置（顺序重要，必须与索引列顺序一致）
 - `markerExtractor`: 从记录中提取标记值的函数
 - `marker`: 上一页返回的标记值，空值表示第一页
@@ -294,24 +296,7 @@ func main() {
 - `nextMarker`: 下一页的标记值，空值表示没有更多数据
 - `err`: 错误信息
 
-### 链式查询
 
-#### `G[T any](db *gorm.DB) ChainInterface[T]`
-
-创建类型安全的GORM查询链。
-
-**方法：**
-- `Where(query interface{}, args ...interface{}) ChainInterface[T]`
-- `Order(value interface{}) ChainInterface[T]`
-- `Limit(limit int) ChainInterface[T]`
-- `Find(ctx context.Context) ([]T, error)`
-- `First(ctx context.Context) (T, error)`
-- `Delete(ctx context.Context) (int64, error)`
-- `Create(ctx context.Context, value *T) error`
-- `Update(ctx context.Context, column string, value interface{}) error`
-- `Updates(ctx context.Context, values interface{}) error`
-- `Count(ctx context.Context) (int64, error)`
-- `Exec(ctx context.Context, sql string, values ...interface{}) error`
 
 ## 测试
 

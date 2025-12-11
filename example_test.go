@@ -86,9 +86,9 @@ func ExampleFindWithMarkerPagination() {
 	}
 
 	// First page
-	results, nextMarker, err := gormutil.FindWithMarkerPagination(
+	results, nextMarker, err := gormutil.FindWithMarkerPagination[User](
 		ctx,
-		gormutil.G[User](db),
+		db,
 		"id",
 		func(u User) string { return u.ID },
 		"",
@@ -150,9 +150,9 @@ func ExampleFindWithCompositePagination() {
 	}
 
 	// Query
-	results, nextMarker, err := gormutil.FindWithCompositePagination(
+	results, nextMarker, err := gormutil.FindWithCompositePagination[Order](
 		ctx,
-		gormutil.G[Order](db),
+		db,
 		columns,
 		markerExtractor,
 		gormutil.CompositePaginationMarker{},
@@ -174,8 +174,8 @@ func ExampleFindWithCompositePagination() {
 	// No more pages
 }
 
-// ExampleG demonstrates chain operations
-func ExampleG() {
+// Example_query demonstrates query with conditions
+func Example_query() {
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	if err != nil {
 		log.Fatal(err)
@@ -202,12 +202,13 @@ func ExampleG() {
 		}
 	}
 
-	// Chain query
-	results, err := gormutil.G[User](db).
+	// Query with conditions
+	var results []User
+	err = db.WithContext(ctx).
 		Where("age > ?", 21).
 		Order("age ASC").
 		Limit(2).
-		Find(ctx)
+		Find(&results).Error
 
 	if err != nil {
 		log.Fatal(err)

@@ -19,7 +19,7 @@ type BaseListInterface[T any, O any] interface {
 type BaseList[T any, O any] struct {
 	db                   *gorm.DB
 	markerFieldExtractor func(T) string
-	queryChainBuilder    func(chain ChainInterface[T], opts *O) ChainInterface[T]
+	queryChainBuilder    func(db *gorm.DB, opts *O) *gorm.DB
 	markerColumnName     string
 }
 
@@ -31,7 +31,7 @@ func NewBaseList[T any, O any](
 	db *gorm.DB,
 	markerColumnName string,
 	markerFieldExtractor func(T) string,
-	queryChainBuilder func(chain ChainInterface[T], opts *O) ChainInterface[T],
+	queryChainBuilder func(db *gorm.DB, opts *O) *gorm.DB,
 ) *BaseList[T, O] {
 	return &BaseList[T, O]{
 		db:                   db,
@@ -47,7 +47,7 @@ var _ BaseListInterface[any, any] = (*BaseList[any, any])(nil)
 func (b *BaseList[T, Options]) List(ctx context.Context, marker string, limit int, opts *Options) (item []T, nextMarker string, err error) {
 	return FindWithMarkerPagination(
 		ctx,
-		b.queryChainBuilder(G[T](b.db), opts),
+		b.queryChainBuilder(b.db, opts),
 		b.markerColumnName,
 		b.markerFieldExtractor,
 		marker,
@@ -59,7 +59,7 @@ func (b *BaseList[T, Options]) List(ctx context.Context, marker string, limit in
 //
 // Parameters:
 //   - ctx: Context
-//   - chain: GORM query chain
+//   - db: GORM database instance
 //   - markerColumnName: Column name used as pagination marker (must be indexed and unique/ascending)
 //   - markerFieldExtractor: Function to extract marker value from a record
 //   - marker: Marker value from the previous page, empty string for the first page
@@ -71,7 +71,7 @@ func (b *BaseList[T, Options]) List(ctx context.Context, marker string, limit in
 //   - err: Error information
 func FindWithMarkerPagination[Record any](
 	ctx context.Context,
-	chain ChainInterface[Record],
+	db *gorm.DB,
 	markerColumnName string,
 	markerFieldExtractor func(Record) string,
 	marker string,
@@ -89,15 +89,16 @@ func FindWithMarkerPagination[Record any](
 	}
 
 	// Build query: if there's a marker, query from after the marker
+	query := db.WithContext(ctx)
 	if marker != "" {
-		chain = chain.Where(fmt.Sprintf("%s > ?", markerColumnName), marker)
+		query = query.Where(fmt.Sprintf("%s > ?", markerColumnName), marker)
 	}
 
 	// Order by marker column ascending, fetch one extra record to check if there's a next page
-	chain = chain.Order(fmt.Sprintf("%s ASC", markerColumnName)).Limit(limit + 1)
+	query = query.Order(fmt.Sprintf("%s ASC", markerColumnName)).Limit(limit + 1)
 
 	// Execute query
-	results, err = chain.Find(ctx)
+	err = query.Find(&results).Error
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to query records: %w", err)
 	}
@@ -158,7 +159,7 @@ func DecodeCompositePaginationMarker(s string) (CompositePaginationMarker, error
 //
 // Parameters:
 //   - ctx: Context
-//   - chain: GORM query chain
+//   - db: GORM database instance
 //   - columns: Column configurations for pagination (order matters, must match index order)
 //   - markerExtractor: Function to extract marker value from a record
 //   - marker: Marker value from the previous page, empty for the first page
@@ -184,11 +185,11 @@ func DecodeCompositePaginationMarker(s string) (CompositePaginationMarker, error
 //	    }
 //	}
 //	results, nextMarker, err := FindWithCompositePagination(
-//	    ctx, chain, columns, markerExtractor, marker, 10,
+//	    ctx, db, columns, markerExtractor, marker, 10,
 //	)
 func FindWithCompositePagination[Record any](
 	ctx context.Context,
-	chain ChainInterface[Record],
+	db *gorm.DB,
 	columns []CompositePaginationColumn,
 	markerExtractor func(Record) CompositePaginationMarker,
 	marker CompositePaginationMarker,
@@ -211,10 +212,13 @@ func FindWithCompositePagination[Record any](
 		)
 	}
 
+	// Build query
+	query := db.WithContext(ctx)
+
 	// Build WHERE condition: if there's a marker, query from after the marker
 	if len(marker.Values) > 0 {
 		whereClause, args := buildCompositeWhereClause(columns, marker.Values)
-		chain = chain.Where(whereClause, args...)
+		query = query.Where(whereClause, args...)
 	}
 
 	// Build ORDER BY clause
@@ -226,10 +230,10 @@ func FindWithCompositePagination[Record any](
 		}
 		orderClauses = append(orderClauses, fmt.Sprintf("%s %s", col.ColumnName, direction))
 	}
-	chain = chain.Order(strings.Join(orderClauses, ", ")).Limit(limit + 1)
+	query = query.Order(strings.Join(orderClauses, ", ")).Limit(limit + 1)
 
 	// Execute query
-	results, err = chain.Find(ctx)
+	err = query.Find(&results).Error
 	if err != nil {
 		return nil, CompositePaginationMarker{}, fmt.Errorf("failed to query records: %w", err)
 	}

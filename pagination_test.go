@@ -225,9 +225,9 @@ func TestFindWithCompositePagination(t *testing.T) {
 	}
 
 	t.Run("first page", func(t *testing.T) {
-		results, nextMarker, err := FindWithCompositePagination(
+		results, nextMarker, err := FindWithCompositePagination[TestItem](
 			ctx,
-			G[TestItem](db),
+			db,
 			columns,
 			markerExtractor,
 			CompositePaginationMarker{},
@@ -257,9 +257,9 @@ func TestFindWithCompositePagination(t *testing.T) {
 			Values: []string{"user1", "2024-01-01", "id3"},
 		}
 
-		results, nextMarker, err := FindWithCompositePagination(
+		results, nextMarker, err := FindWithCompositePagination[TestItem](
 			ctx,
-			G[TestItem](db),
+			db,
 			columns,
 			markerExtractor,
 			marker,
@@ -288,9 +288,9 @@ func TestFindWithCompositePagination(t *testing.T) {
 			Values: []string{"user2", "2024-01-01", "id6"},
 		}
 
-		results, nextMarker, err := FindWithCompositePagination(
+		results, nextMarker, err := FindWithCompositePagination[TestItem](
 			ctx,
-			G[TestItem](db),
+			db,
 			columns,
 			markerExtractor,
 			marker,
@@ -309,9 +309,9 @@ func TestFindWithCompositePagination(t *testing.T) {
 			Values: []string{"user3", "2024-01-01", "id999"},
 		}
 
-		results, nextMarker, err := FindWithCompositePagination(
+		results, nextMarker, err := FindWithCompositePagination[TestItem](
 			ctx,
-			G[TestItem](db),
+			db,
 			columns,
 			markerExtractor,
 			marker,
@@ -336,9 +336,9 @@ func TestFindWithCompositePagination_ParameterValidation(t *testing.T) {
 	}
 
 	t.Run("invalid limit", func(t *testing.T) {
-		_, _, err := FindWithCompositePagination(
+		_, _, err := FindWithCompositePagination[TestItem](
 			ctx,
-			G[TestItem](db),
+			db,
 			columns,
 			markerExtractor,
 			CompositePaginationMarker{},
@@ -349,9 +349,9 @@ func TestFindWithCompositePagination_ParameterValidation(t *testing.T) {
 	})
 
 	t.Run("empty columns", func(t *testing.T) {
-		_, _, err := FindWithCompositePagination(
+		_, _, err := FindWithCompositePagination[TestItem](
 			ctx,
-			G[TestItem](db),
+			db,
 			[]CompositePaginationColumn{},
 			markerExtractor,
 			CompositePaginationMarker{},
@@ -362,9 +362,9 @@ func TestFindWithCompositePagination_ParameterValidation(t *testing.T) {
 	})
 
 	t.Run("nil markerExtractor", func(t *testing.T) {
-		_, _, err := FindWithCompositePagination(
+		_, _, err := FindWithCompositePagination[TestItem](
 			ctx,
-			G[TestItem](db),
+			db,
 			columns,
 			nil,
 			CompositePaginationMarker{},
@@ -378,9 +378,9 @@ func TestFindWithCompositePagination_ParameterValidation(t *testing.T) {
 		marker := CompositePaginationMarker{
 			Values: []string{"user1", "extra_value"},
 		}
-		_, _, err := FindWithCompositePagination(
+		_, _, err := FindWithCompositePagination[TestItem](
 			ctx,
-			G[TestItem](db),
+			db,
 			columns,
 			markerExtractor,
 			marker,
@@ -411,9 +411,9 @@ func TestFindWithMarkerPagination(t *testing.T) {
 	}
 
 	t.Run("first page", func(t *testing.T) {
-		results, nextMarker, err := FindWithMarkerPagination(
+		results, nextMarker, err := FindWithMarkerPagination[TestItem](
 			ctx,
-			G[TestItem](db),
+			db,
 			"id",
 			markerExtractor,
 			"",
@@ -429,9 +429,9 @@ func TestFindWithMarkerPagination(t *testing.T) {
 	})
 
 	t.Run("second page", func(t *testing.T) {
-		results, nextMarker, err := FindWithMarkerPagination(
+		results, nextMarker, err := FindWithMarkerPagination[TestItem](
 			ctx,
-			G[TestItem](db),
+			db,
 			"id",
 			markerExtractor,
 			"id3",
@@ -453,9 +453,9 @@ func TestFindWithMarkerPagination_ParameterValidation(t *testing.T) {
 	}
 
 	t.Run("invalid limit", func(t *testing.T) {
-		_, _, err := FindWithMarkerPagination(
+		_, _, err := FindWithMarkerPagination[TestItem](
 			ctx,
-			G[TestItem](db),
+			db,
 			"id",
 			markerExtractor,
 			"",
@@ -466,9 +466,9 @@ func TestFindWithMarkerPagination_ParameterValidation(t *testing.T) {
 	})
 
 	t.Run("empty markerColumnName", func(t *testing.T) {
-		_, _, err := FindWithMarkerPagination(
+		_, _, err := FindWithMarkerPagination[TestItem](
 			ctx,
-			G[TestItem](db),
+			db,
 			"",
 			markerExtractor,
 			"",
@@ -479,9 +479,9 @@ func TestFindWithMarkerPagination_ParameterValidation(t *testing.T) {
 	})
 
 	t.Run("nil markerExtractor", func(t *testing.T) {
-		_, _, err := FindWithMarkerPagination(
+		_, _, err := FindWithMarkerPagination[TestItem](
 			ctx,
-			G[TestItem](db),
+			db,
 			"id",
 			nil,
 			"",
@@ -530,9 +530,9 @@ func BenchmarkFindWithCompositePagination(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, _, _ = FindWithCompositePagination(
+		_, _, _ = FindWithCompositePagination[TestItem](
 			ctx,
-			G[TestItem](db),
+			db,
 			columns,
 			markerExtractor,
 			CompositePaginationMarker{},

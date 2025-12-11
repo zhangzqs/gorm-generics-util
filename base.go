@@ -43,7 +43,7 @@ func (b *Base[T]) AutoMigrate(ctx context.Context) error {
 	}
 	// Execute extra migration SQL statements
 	for _, sql := range b.extraMigrateSQLs {
-		if err := G[T](b.db).Exec(ctx, sql); err != nil {
+		if err := b.db.WithContext(ctx).Exec(sql).Error; err != nil {
 			return fmt.Errorf("failed to execute extra migrate SQL: %w", err)
 		}
 	}
@@ -52,21 +52,23 @@ func (b *Base[T]) AutoMigrate(ctx context.Context) error {
 
 // Create inserts a new record into the database.
 func (b *Base[T]) Create(ctx context.Context, record *T) error {
-	return G[T](b.db).Create(ctx, record)
+	return b.db.WithContext(ctx).Create(record).Error
 }
 
 // GetByID retrieves a record by its ID.
 func (b *Base[T]) GetByID(ctx context.Context, id string) (*T, error) {
-	ret, err := G[T](b.db).Where(fmt.Sprintf("%s = ?", b.idColumnName), id).First(ctx)
+	var result T
+	err := b.db.WithContext(ctx).Where(fmt.Sprintf("%s = ?", b.idColumnName), id).First(&result).Error
 	if err != nil {
 		return nil, err
 	}
-	return &ret, nil
+	return &result, nil
 }
 
 // PhysicalDelete permanently deletes a record by its ID.
 // Returns true if a record was deleted, false otherwise.
 func (b *Base[T]) PhysicalDelete(ctx context.Context, id string) (bool, error) {
-	rowsAffected, err := G[T](b.db).Where(fmt.Sprintf("%s = ?", b.idColumnName), id).Delete(ctx)
-	return rowsAffected > 0, err
+	var t T
+	result := b.db.WithContext(ctx).Where(fmt.Sprintf("%s = ?", b.idColumnName), id).Delete(&t)
+	return result.RowsAffected > 0, result.Error
 }
