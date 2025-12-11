@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"log"
 
-	gormutil "github.com/zhangzqs/gorm-generics-util"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
+
+	gormutil "github.com/zhangzqs/gorm-generics-util"
 )
 
 // User represents a user entity
@@ -33,13 +34,15 @@ func ExampleBase() {
 	ctx := context.Background()
 
 	// Auto migrate
-	if err := base.AutoMigrate(ctx); err != nil {
+	err = base.AutoMigrate(ctx)
+	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Create a user
 	user := &User{ID: "1", Name: "Alice", Age: 25}
-	if err := base.Create(ctx, user); err != nil {
+	err = base.Create(ctx, user)
+	if err != nil {
 		log.Fatal(err)
 	}
 
@@ -64,7 +67,8 @@ func ExampleFindWithMarkerPagination() {
 	ctx := context.Background()
 
 	// Auto migrate
-	if err := db.AutoMigrate(&User{}); err != nil {
+	err = db.AutoMigrate(&User{})
+	if err != nil {
 		log.Fatal(err)
 	}
 
@@ -75,7 +79,8 @@ func ExampleFindWithMarkerPagination() {
 		{ID: "3", Name: "Charlie", Age: 35},
 	}
 	for _, u := range users {
-		if err := db.Create(&u).Error; err != nil {
+		err = db.Create(&u).Error
+		if err != nil {
 			log.Fatal(err)
 		}
 	}
@@ -114,7 +119,8 @@ func ExampleFindWithCompositePagination() {
 		CreatedAt string `gorm:"column:created_at;primaryKey"`
 		ID        string `gorm:"column:id;primaryKey"`
 	}
-	if err := db.AutoMigrate(&Order{}); err != nil {
+	err = db.AutoMigrate(&Order{})
+	if err != nil {
 		log.Fatal(err)
 	}
 
@@ -124,7 +130,8 @@ func ExampleFindWithCompositePagination() {
 		{UserID: "user1", CreatedAt: "2024-01-02", ID: "id2"},
 	}
 	for _, o := range orders {
-		if err := db.Create(&o).Error; err != nil {
+		err = db.Create(&o).Error
+		if err != nil {
 			log.Fatal(err)
 		}
 	}
@@ -177,7 +184,8 @@ func ExampleG() {
 	ctx := context.Background()
 
 	// Auto migrate
-	if err := db.AutoMigrate(&User{}); err != nil {
+	err = db.AutoMigrate(&User{})
+	if err != nil {
 		log.Fatal(err)
 	}
 
@@ -188,7 +196,8 @@ func ExampleG() {
 		{ID: "3", Name: "Charlie", Age: 20},
 	}
 	for _, u := range users {
-		if err := db.Create(&u).Error; err != nil {
+		err = db.Create(&u).Error
+		if err != nil {
 			log.Fatal(err)
 		}
 	}
